@@ -87,6 +87,33 @@ services:
       - "9010:9000"
       - "9001:9001"
 
+  spark-master:
+    image: bitnami/spark:3.5
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "7077:7077"   # порт для воркеров
+      - "8088:8080"   # веб-интерфейс мастера
+    volumes:
+      - ./spark_jobs:/opt/spark/jobs
+    restart: unless-stopped
+
+  spark-worker:
+    image: bitnami/spark:3.5
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+      - minio
+    ports:
+      - "8081:8081"   # веб-интерфейс воркера
+    volumes:
+      - ./spark_jobs:/opt/spark/jobs
+    restart: unless-stopped
+
   postgres:
     image: postgres:13
     container_name: postgres_airflow

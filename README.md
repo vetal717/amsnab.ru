@@ -1,6 +1,8 @@
 # amsnab.ru
 
 ## Порты
-- **Airflow**: http://localhost:8080
-- **MinIO Console**: http://localhost:9001
-- **Clickhouse**: http://localhost:9000
+- http://localhost:8080: **Airflow UI**
+- http://localhost:9001: **MinIO Console**
+- http://localhost:8123: **HTTP-интерфейс ClickHouse**
+- http://localhost:8088: **Spark Master**
+- http://localhost:8081: **Spark Worker**

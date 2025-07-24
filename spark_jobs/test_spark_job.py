@@ -1,0 +1,26 @@
+from pyspark.sql import SparkSession
+
+if __name__ == "__main__":
+    spark = SparkSession.builder \
+        .appName("SimpleTestJob") \
+        .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
+        .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
+        .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+        .getOrCreate()
+
+
+    # Уровень логов — скрываем INFO
+    spark.sparkContext.setLogLevel("ERROR")
+
+    # Создаём простой датафрейм
+    data = [("Alice", 1), ("Bob", 2), ("Catherine", 3)]
+    df = spark.createDataFrame(data, ["name", "id"])
+
+    # Сохраняем его в MinIO в формате Parquet
+    df.write.mode("overwrite").parquet("s3a://test-bucket/test-data/people.parquet")
+
+    print("✅ DataFrame успешно записан в MinIO")
+
+    spark.stop()
