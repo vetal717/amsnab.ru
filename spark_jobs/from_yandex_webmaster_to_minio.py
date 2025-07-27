@@ -2,7 +2,7 @@ from pyspark.sql import SparkSession
 
 if __name__ == "__main__":
     spark = SparkSession.builder \
-        .appName("SimpleTestJob") \
+        .appName("from_yandex_webmaster_to_minio") \
         .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
         .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
         .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     df = spark.createDataFrame(data, ["name", "id"])
 
     # Сохраняем его в MinIO в формате Parquet
-    df.write.mode("overwrite").parquet("s3a://test-bucket/test-data/people.parquet")
+    df.write.mode("overwrite").parquet("s3a://yandex-webmaster/pages_index")
 
     print("✅ DataFrame успешно записан в MinIO")
 

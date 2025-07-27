@@ -48,7 +48,8 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-./airflow}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-./airflow}/config:/opt/airflow/config
-    - ${AIRFLOW_PROJ_DIR:-./airflow}/plugins:/opt/airflow/plugins
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/plugins:/opt/airflow/plugins    
+    - ./spark_jobs:/opt/airflow/spark_jobs # тут будет PySpark-скрипт
   # Specify your custom UID here so that the files in the container are created with the correct owner.
   # It is especially important for Linux/WSL to avoid access rights issues.
   # To check the UID on your machine, run the `id -u` command.
@@ -88,7 +89,7 @@ services:
       - "9001:9001"
 
   spark-master:
-    image: bitnami/spark:3.5
+    image: bitnami/spark:3.5.0
     container_name: spark-master
     environment:
       - SPARK_MODE=master
@@ -100,7 +101,7 @@ services:
     restart: unless-stopped
 
   spark-worker:
-    image: bitnami/spark:3.5
+    image: bitnami/spark:3.5.0
     container_name: spark-worker
     environment:
       - SPARK_MODE=worker
