@@ -98,6 +98,7 @@ services:
       - "8088:8080"   # веб-интерфейс мастера
     volumes:
       - ./spark_jobs:/opt/spark/jobs
+      - ./lib:/opt/spark/lib   # Spark будет использовать lib
     restart: unless-stopped
 
   spark-worker:
@@ -113,7 +114,22 @@ services:
       - "8081:8081"   # веб-интерфейс воркера
     volumes:
       - ./spark_jobs:/opt/spark/jobs
+      - ./lib:/opt/spark/lib   # Spark будет использовать lib
     restart: unless-stopped
+
+  jupyter:
+    image: jupyter/pyspark-notebook:python-3.11
+    container_name: jupyter-spark
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work  # монтируем папку с ноутбуками
+      - ./lib:/home/jovyan/lib   
+    environment:
+      - JUPYTER_TOKEN=airflow          # пароль для доступа
+    depends_on:
+      - spark-master
+      - minio
 
   postgres:
     image: postgres:13

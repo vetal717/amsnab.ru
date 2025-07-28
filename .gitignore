@@ -1,3 +1,4 @@
 .env
 airflow/logs/
 s3_data/
+notebooks/
