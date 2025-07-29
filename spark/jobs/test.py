@@ -1,4 +1,3 @@
-from ..lib.yandex_webmaster import YandexWebmasterAPI # Код для работы с Вебмастером
 from pyspark.sql import SparkSession
 
 

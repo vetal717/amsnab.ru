@@ -3,7 +3,7 @@ import pandas as pd
 import json
 import datetime
 from http.client import RemoteDisconnected
-# from airflow.exceptions import AirflowSkipException
+from airflow.exceptions import AirflowSkipException
 
 
 class YandexWebmasterAPI:

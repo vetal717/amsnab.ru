@@ -2,3 +2,5 @@
 airflow/logs/
 s3_data/
 notebooks/
+airflow/dags/__pycache__/
+lib/__pycache__/

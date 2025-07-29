@@ -49,7 +49,8 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-./airflow}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-./airflow}/plugins:/opt/airflow/plugins    
-    - ./spark_jobs:/opt/airflow/spark_jobs # тут будет PySpark-скрипт
+    - ./spark/jobs:/opt/airflow/spark_jobs # тут будет PySpark-скрипт
+    - ./lib:/opt/airflow/lib   # Spark будет использовать lib
   # Specify your custom UID here so that the files in the container are created with the correct owner.
   # It is especially important for Linux/WSL to avoid access rights issues.
   # To check the UID on your machine, run the `id -u` command.
@@ -88,8 +89,10 @@ services:
       - "9010:9000"
       - "9001:9001"
 
-  spark-master:
-    image: bitnami/spark:3.5.0
+  spark-master:    
+    build:
+      context: ./spark
+      dockerfile: Dockerfile    
     container_name: spark-master
     environment:
       - SPARK_MODE=master
@@ -97,12 +100,14 @@ services:
       - "7077:7077"   # порт для воркеров
       - "8088:8080"   # веб-интерфейс мастера
     volumes:
-      - ./spark_jobs:/opt/spark/jobs
+      - ./spark/jobs:/opt/spark/jobs
       - ./lib:/opt/spark/lib   # Spark будет использовать lib
     restart: unless-stopped
 
   spark-worker:
-    image: bitnami/spark:3.5.0
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
     container_name: spark-worker
     environment:
       - SPARK_MODE=worker
@@ -113,7 +118,7 @@ services:
     ports:
       - "8081:8081"   # веб-интерфейс воркера
     volumes:
-      - ./spark_jobs:/opt/spark/jobs
+      - ./spark/jobs:/opt/spark/jobs
       - ./lib:/opt/spark/lib   # Spark будет использовать lib
     restart: unless-stopped
 
