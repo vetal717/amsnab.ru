@@ -51,6 +51,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/plugins:/opt/airflow/plugins    
     - ./spark/jobs:/opt/airflow/spark_jobs # тут будет PySpark-скрипт
     - ./lib:/opt/airflow/lib   # Spark будет использовать lib
+    - ./jars:/opt/jars
   # Specify your custom UID here so that the files in the container are created with the correct owner.
   # It is especially important for Linux/WSL to avoid access rights issues.
   # To check the UID on your machine, run the `id -u` command.
@@ -95,13 +96,14 @@ services:
       dockerfile: Dockerfile    
     container_name: spark-master
     environment:
-      - SPARK_MODE=master
+      SPARK_MODE: master
     ports:
       - "7077:7077"   # порт для воркеров
       - "8088:8080"   # веб-интерфейс мастера
     volumes:
       - ./spark/jobs:/opt/spark/jobs
       - ./lib:/opt/spark/lib   # Spark будет использовать lib
+      - ./jars:/opt/jars
     restart: unless-stopped
 
   spark-worker:
@@ -110,8 +112,8 @@ services:
       dockerfile: Dockerfile
     container_name: spark-worker
     environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
     depends_on:
       - spark-master
       - minio
@@ -120,6 +122,7 @@ services:
     volumes:
       - ./spark/jobs:/opt/spark/jobs
       - ./lib:/opt/spark/lib   # Spark будет использовать lib
+      - ./jars:/opt/jars
     restart: unless-stopped
 
   jupyter:

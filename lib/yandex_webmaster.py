@@ -3,7 +3,6 @@ import pandas as pd
 import json
 import datetime
 from http.client import RemoteDisconnected
-from airflow.exceptions import AirflowSkipException
 
 
 class YandexWebmasterAPI:
@@ -57,24 +56,21 @@ class YandexWebmasterAPI:
         return region_id
         
     # Возвращает количество страниц в поиске за определенный период времени. 
-    # По умолчанию возвращаются данные за текущий день.    
     def getting_history_changes_number_pages_search(self, host_id, start_date, end_date):
         request_url = f'{self.__main_url}/{self.get_user_id()}/hosts/{host_id}/search-urls/in-search/history' \
                       f'?date_from={start_date}&date_to={end_date}'
         try:
             response = requests.get(request_url, headers=self.headers)
-            response = response.json()        
-        # Проверяем наличие ключа и его содержимое        
-       # if response.get('history') is not None or response.get('history'):
+            response = response.json()   
+            if response.get('history') is None:
+                return '[]'
             data = response.get('history')
             df = pd.DataFrame(data)        
             df['domain'] = self.domain_from_host_id(host_id)
             df = df[['domain', 'date', 'value']]
-            return df.to_json(orient='records')
-        except RemoteDisconnected as e:
-            raise AirflowSkipException("No data for any site on this date.")
-        except requests.exceptions.RequestException as e:
-            raise AirflowSkipException("No data for any site on this date.")        
+            return df.to_json(orient='records')        
+        except (RemoteDisconnected, requests.exceptions.RequestException):
+            return '[]'      
             
   
     # Возвращает историю изменения индекса качества сайта (ИКС).

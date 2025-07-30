@@ -8,17 +8,22 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, TimestampType, IntegerType
 from pyspark.sql.functions import to_date, year, month
 
+
 # Достаем переданные даты из Dag
 parser = argparse.ArgumentParser()
 parser.add_argument('--start_date', type=str, required=True, help='Start date in YYYY-MM-DD format')
 parser.add_argument('--end_date', type=str, required=True, help='End date in YYYY-MM-DD format')
+parser.add_argument('--minio_access_key', required=True)
+parser.add_argument('--minio_secret_key', required=True)
+parser.add_argument('--yandex_access_token', required=True)
 args = parser.parse_args()
 start_date = args.start_date
 end_date = args.end_date
+minio_access_key = args.minio_access_key
+minio_secret_key = args.minio_secret_key
+yandex_access_token = args.yandex_access_token
 
-ACCESS_TOKEN = "y0__xCOhZKGAhj2kCUg__3MxRIwkoi5-wd_1A76mXYCeIu6_LnZVCdTVGuJUQ"
-# Инициализация объекта YandexWebmasterAPI
-obj_webmaster = YandexWebmasterAPI(access_token=ACCESS_TOKEN)
+obj_webmaster = YandexWebmasterAPI(access_token=yandex_access_token)
 
 sites = ["https:amsnab.ru:443", "https:balashiha.amsnab.ru:443"]
 # sites = ["https:amsnab.ru:443", "https:balashiha.amsnab.ru:443", "https:bronnicy.amsnab.ru:443", "https:chekhov.amsnab.ru:443", "https:chernogolovka.amsnab.ru:443"]
@@ -28,21 +33,20 @@ sites = ["https:amsnab.ru:443", "https:balashiha.amsnab.ru:443"]
 result_list = [] # Список для хранения данных
 for site in sites:
     data = obj_webmaster.getting_history_changes_number_pages_search(site, start_date, end_date)
-    if not data or data == '[]':
-        continue
     result_list.append(data)
-    if not result_list:
-        print("NO_DATA")
-        sys.exit(0)  # успешное завершение, но сигнал в логи о пустых данных
     
+    # Здесь нужно проверить, есть ли данные или нет
+    if not result_list or all(item == '[]' for item in result_list):
+        sys.exit(0)
+
 # Список словарей (dict) полученных из json.loads
 data = [json.loads(item)[0] for item in result_list]
 
 spark = SparkSession.builder \
     .appName("from_yandex_webmaster_to_minio") \
     .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
-    .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
-    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
+    .config("spark.hadoop.fs.s3a.access.key", minio_access_key) \
+    .config("spark.hadoop.fs.s3a.secret.key", minio_secret_key) \
     .config("spark.hadoop.fs.s3a.path.style.access", "true") \
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
     .getOrCreate()
@@ -64,7 +68,7 @@ df_yw = df_yw.withColumn("date", to_date("date"))\
              .withColumn("month", month("date"))
 
 # Сохраняем его в MinIO в формате Parquet
-df_yw.coalesce(1).write.mode("append") \
+df_yw.coalesce(1).write.mode("overwrite") \
     .partitionBy("year", "month") \
     .parquet("s3a://yandex-webmaster/pages_index")
 
