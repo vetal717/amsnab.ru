@@ -52,6 +52,7 @@ x-airflow-common:
     - ./spark/jobs:/opt/airflow/spark_jobs # тут будет PySpark-скрипт
     - ./lib:/opt/airflow/lib   # Spark будет использовать lib
     - ./jars:/opt/jars
+    - ./input_files:/opt/spark/input_files
   # Specify your custom UID here so that the files in the container are created with the correct owner.
   # It is especially important for Linux/WSL to avoid access rights issues.
   # To check the UID on your machine, run the `id -u` command.
@@ -104,6 +105,7 @@ services:
       - ./spark/jobs:/opt/spark/jobs
       - ./lib:/opt/spark/lib   # Spark будет использовать lib
       - ./jars:/opt/jars
+      - ./input_files:/opt/spark/input_files
     restart: unless-stopped
 
   spark-worker:
@@ -123,6 +125,7 @@ services:
       - ./spark/jobs:/opt/spark/jobs
       - ./lib:/opt/spark/lib   # Spark будет использовать lib
       - ./jars:/opt/jars
+      - ./input_files:/opt/spark/input_files
     restart: unless-stopped
 
   jupyter:

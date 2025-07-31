@@ -23,7 +23,7 @@ with DAG(
     dag_id='from_yandex_webmaster_to_minio_4',
     default_args=default_args,
     schedule_interval='@daily',
-    catchup=False,
+    catchup=True,
     description='Run PySpark job writing to MinIO',
 ) as dag:
 

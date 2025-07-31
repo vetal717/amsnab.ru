@@ -23,15 +23,13 @@ minio_access_key = args.minio_access_key
 minio_secret_key = args.minio_secret_key
 yandex_access_token = args.yandex_access_token
 
+
 obj_webmaster = YandexWebmasterAPI(access_token=yandex_access_token)
-
-sites = ["https:amsnab.ru:443", "https:balashiha.amsnab.ru:443"]
-# sites = ["https:amsnab.ru:443", "https:balashiha.amsnab.ru:443", "https:bronnicy.amsnab.ru:443", "https:chekhov.amsnab.ru:443", "https:chernogolovka.amsnab.ru:443"]
-
-# site = "https:amsnab.ru:443"
-
-result_list = [] # Список для хранения данных
-for site in sites:
+# Получаем список сайтов для анализа
+with open('/opt/spark/input_files/yw_list_ids_all_sites.txt', 'r') as file:
+        list_id_all_sites = [line.strip() for line in file.readlines()]
+result_list = []
+for site in list_id_all_sites:
     data = obj_webmaster.getting_history_changes_number_pages_search(site, start_date, end_date)
     result_list.append(data)
     
