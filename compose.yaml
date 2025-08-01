@@ -53,6 +53,7 @@ x-airflow-common:
     - ./lib:/opt/airflow/lib   # Spark будет использовать lib
     - ./jars:/opt/jars
     - ./input_files:/opt/spark/input_files
+    - ./temporarily:/opt/temporarily
   # Specify your custom UID here so that the files in the container are created with the correct owner.
   # It is especially important for Linux/WSL to avoid access rights issues.
   # To check the UID on your machine, run the `id -u` command.
@@ -106,6 +107,7 @@ services:
       - ./lib:/opt/spark/lib   # Spark будет использовать lib
       - ./jars:/opt/jars
       - ./input_files:/opt/spark/input_files
+      - ./temporarily:/opt/temporarily
     restart: unless-stopped
 
   spark-worker:
@@ -126,6 +128,7 @@ services:
       - ./lib:/opt/spark/lib   # Spark будет использовать lib
       - ./jars:/opt/jars
       - ./input_files:/opt/spark/input_files
+      - ./temporarily:/opt/temporarily
     restart: unless-stopped
 
   jupyter:

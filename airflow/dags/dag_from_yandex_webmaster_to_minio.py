@@ -7,6 +7,19 @@ from airflow.hooks.base import BaseHook
 from airflow.models import Variable
 
 
+def check_spark_status():
+    STATUS_FILE = "/opt/temporarily/data_status.txt"    
+    with open(STATUS_FILE, "r") as f:
+        status = f.read().strip()   
+    
+    if status == "NO_DATA":
+        raise AirflowSkipException("❌ No data for this date, skipping the task.")
+    elif status == "OK":
+        return "✅ Data processed successfully"
+    else:
+        raise Exception(f"Unknown status")
+
+
 yandex_access_token = Variable.get("YANDEX_ACCESS_TOKEN", default_var=None)
 conn = BaseHook.get_connection("minio_s3_conn")
 extra = conn.extra_dejson  # парсится как dict
@@ -16,15 +29,17 @@ aws_secret_access_key = extra.get("aws_secret_access_key")
 
 
 default_args = {
-    'start_date': datetime(2025, 7, 25),
+    "start_date": datetime(2025, 7, 25),
+    "retries": 0
 }
 
 with DAG(
-    dag_id='from_yandex_webmaster_to_minio_4',
+    dag_id="from_yandex_webmaster_to_minio_24",
     default_args=default_args,
-    schedule_interval='@daily',
+    schedule_interval="@daily",
     catchup=True,
-    description='Run PySpark job writing to MinIO',
+    description="Run PySpark job writing to MinIO",
+    max_active_runs=1
 ) as dag:
 
     run_external_spark_job = SparkSubmitOperator(
@@ -46,3 +61,10 @@ with DAG(
             '--yandex_access_token', yandex_access_token
         ]
     )
+
+    check_status = PythonOperator(
+    task_id='check_status',
+    python_callable=check_spark_status,
+)
+
+    run_external_spark_job >> check_status

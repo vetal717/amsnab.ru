@@ -1,3 +1,1 @@
 https:abakan.vozvrashchenie.com:443
-https:abinsk.vozvrashchenie.com:443
-https:achinsk.vozvrashchenie.com:443

@@ -24,6 +24,7 @@ minio_secret_key = args.minio_secret_key
 yandex_access_token = args.yandex_access_token
 
 
+STATUS_FILE = "/opt/temporarily/data_status.txt"
 obj_webmaster = YandexWebmasterAPI(access_token=yandex_access_token)
 # Получаем список сайтов для анализа
 with open('/opt/spark/input_files/yw_list_ids_all_sites.txt', 'r') as file:
@@ -34,42 +35,47 @@ for site in list_id_all_sites:
     result_list.append(data)
     
     # Здесь нужно проверить, есть ли данные или нет
-    if not result_list or all(item == '[]' for item in result_list):
-        sys.exit(0)
+    if not result_list or all(item == '[]' for item in result_list):        
+        print("❌ Нет данных для записи")
+        with open(STATUS_FILE, "w") as f:
+            f.write("NO_DATA")
+        sys.exit(0)        
+    else:
+        with open(STATUS_FILE, "w") as f:
+            f.write("OK")       
 
-# Список словарей (dict) полученных из json.loads
-data = [json.loads(item)[0] for item in result_list]
+if len(result_list) != 0:
+    # Список словарей (dict) полученных из json.loads
+    data = [json.loads(item)[0] for item in result_list]
 
-spark = SparkSession.builder \
-    .appName("from_yandex_webmaster_to_minio") \
-    .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
-    .config("spark.hadoop.fs.s3a.access.key", minio_access_key) \
-    .config("spark.hadoop.fs.s3a.secret.key", minio_secret_key) \
-    .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
-    .getOrCreate()
+    spark = SparkSession.builder \
+        .appName("from_yandex_webmaster_to_minio") \
+        .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
+        .config("spark.hadoop.fs.s3a.access.key", minio_access_key) \
+        .config("spark.hadoop.fs.s3a.secret.key", minio_secret_key) \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+        .getOrCreate()
 
+    # Уровень логов — скрываем INFO
+    spark.sparkContext.setLogLevel("ERROR")
 
-# Уровень логов — скрываем INFO
-spark.sparkContext.setLogLevel("ERROR")
+    schema = StructType([
+        StructField("domain", StringType(), True),
+        StructField("date", StringType(), True),  # сначала строка, потом можно преобразовать в timestamp
+        StructField("value", IntegerType(), True),
+    ])
 
+    df_yw = spark.createDataFrame(data, schema=schema)
+    df_yw = df_yw.withColumn("date", to_date("date"))\
+                .withColumn("year", year("date"))\
+                .withColumn("month", month("date"))
 
-schema = StructType([
-    StructField("domain", StringType(), True),
-    StructField("date", StringType(), True),  # сначала строка, потом можно преобразовать в timestamp
-    StructField("value", IntegerType(), True),
-])
+    # Сохраняем его в MinIO в формате Parquet
+    df_yw.coalesce(1).write.mode("overwrite") \
+        .partitionBy("year", "month") \
+        .parquet("s3a://yandex-webmaster/pages_index")
 
-df_yw = spark.createDataFrame(data, schema=schema)
-df_yw = df_yw.withColumn("date", to_date("date"))\
-             .withColumn("year", year("date"))\
-             .withColumn("month", month("date"))
+    print("✅ DataFrame успешно записан в MinIO")
 
-# Сохраняем его в MinIO в формате Parquet
-df_yw.coalesce(1).write.mode("overwrite") \
-    .partitionBy("year", "month") \
-    .parquet("s3a://yandex-webmaster/pages_index")
-
-print("✅ DataFrame успешно записан в MinIO")
-
-spark.stop()
+    spark.stop()
