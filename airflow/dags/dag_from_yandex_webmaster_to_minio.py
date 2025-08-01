@@ -5,20 +5,29 @@ from airflow.exceptions import AirflowSkipException
 from datetime import datetime
 from airflow.hooks.base import BaseHook
 from airflow.models import Variable
+import os
 
 
-def check_spark_status():
-    STATUS_FILE = "/opt/temporarily/data_status.txt"    
-    with open(STATUS_FILE, "r") as f:
-        status = f.read().strip()   
-    
-    if status == "NO_DATA":
-        raise AirflowSkipException("❌ No data for this date, skipping the task.")
-    elif status == "OK":
-        return "✅ Data processed successfully"
-    else:
-        raise Exception(f"Unknown status")
-
+def check_spark_status(**context):
+    start_date = context["yesterday_ds"]
+    STATUS_FILE = f"/opt/temporarily/data_status_{start_date}.txt"    
+    try:
+        with open(STATUS_FILE, "r") as f:
+            status = f.read().strip()
+        
+        if status == "NO_DATA":
+            raise AirflowSkipException("❌ No data for this date, skipping the task.")
+        elif status == "OK":
+            return "✅ Data processed successfully"
+        else:
+            raise Exception("Unknown status")
+    finally:
+        try:
+            if os.path.exists(STATUS_FILE):
+                os.remove(STATUS_FILE)
+                print(f"Файл статуса {STATUS_FILE} удалён.")
+        except Exception as e:
+            print(f"Ошибка при удалении файла статуса: {e}")
 
 yandex_access_token = Variable.get("YANDEX_ACCESS_TOKEN", default_var=None)
 conn = BaseHook.get_connection("minio_s3_conn")
@@ -34,12 +43,12 @@ default_args = {
 }
 
 with DAG(
-    dag_id="from_yandex_webmaster_to_minio_24",
+    dag_id="from_yandex_webmaster_to_minio_30",
     default_args=default_args,
     schedule_interval="@daily",
     catchup=True,
     description="Run PySpark job writing to MinIO",
-    max_active_runs=1
+    max_active_runs=3
 ) as dag:
 
     run_external_spark_job = SparkSubmitOperator(

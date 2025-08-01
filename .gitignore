@@ -5,3 +5,4 @@ notebooks/
 airflow/dags/__pycache__/
 lib/__pycache__/
 jars/
+temporarily/

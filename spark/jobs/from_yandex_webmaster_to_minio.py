@@ -24,7 +24,7 @@ minio_secret_key = args.minio_secret_key
 yandex_access_token = args.yandex_access_token
 
 
-STATUS_FILE = "/opt/temporarily/data_status.txt"
+STATUS_FILE = f"/opt/temporarily/data_status_{start_date}.txt"
 obj_webmaster = YandexWebmasterAPI(access_token=yandex_access_token)
 # Получаем список сайтов для анализа
 with open('/opt/spark/input_files/yw_list_ids_all_sites.txt', 'r') as file:
