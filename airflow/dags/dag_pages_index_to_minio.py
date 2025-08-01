@@ -8,9 +8,23 @@ from airflow.models import Variable
 import os
 
 
+STATUS_FILE = "pages_index"
+APPLICATION = "/opt/airflow/spark_jobs/pages_index_to_minio.py"
+DAG_ID="pages_index_to_minio_1"
+DESCRIPTION="Возвращает количество страниц в поиске за определенный период времени."
+
+yandex_access_token = Variable.get("YANDEX_ACCESS_TOKEN", default_var=None)
+conn = BaseHook.get_connection("minio_s3_conn")
+extra = conn.extra_dejson  # парсится как dict
+endpoint_url = extra.get("endpoint_url")
+aws_access_key_id = extra.get("aws_access_key_id")
+aws_secret_access_key = extra.get("aws_secret_access_key")
+
+
 def check_spark_status(**context):
     start_date = context["yesterday_ds"]
-    STATUS_FILE = f"/opt/temporarily/data_status_{start_date}.txt"    
+    global STATUS_FILE
+    STATUS_FILE = f"/opt/temporarily/{STATUS_FILE}_{start_date}.txt"
     try:
         with open(STATUS_FILE, "r") as f:
             status = f.read().strip()
@@ -29,13 +43,6 @@ def check_spark_status(**context):
         except Exception as e:
             print(f"Ошибка при удалении файла статуса: {e}")
 
-yandex_access_token = Variable.get("YANDEX_ACCESS_TOKEN", default_var=None)
-conn = BaseHook.get_connection("minio_s3_conn")
-extra = conn.extra_dejson  # парсится как dict
-endpoint_url = extra.get("endpoint_url")
-aws_access_key_id = extra.get("aws_access_key_id")
-aws_secret_access_key = extra.get("aws_secret_access_key")
-
 
 default_args = {
     "start_date": datetime(2025, 7, 25),
@@ -43,17 +50,17 @@ default_args = {
 }
 
 with DAG(
-    dag_id="from_yandex_webmaster_to_minio_30",
+    dag_id=DAG_ID,
     default_args=default_args,
-    schedule_interval="@daily",
+    schedule_interval="0 0 * * *",
     catchup=True,
-    description="Run PySpark job writing to MinIO",
-    max_active_runs=3
+    description=DESCRIPTION,
+    max_active_runs=10
 ) as dag:
 
     run_external_spark_job = SparkSubmitOperator(
         task_id='run_external_spark_job',
-        application='/opt/airflow/spark_jobs/from_yandex_webmaster_to_minio.py',  # путь до скрипта (volume!)
+        application=APPLICATION,  # путь до скрипта (volume)
         conn_id='spark_default',  # "Admin → Connections"
         conf={
             'spark.hadoop.fs.s3a.endpoint': endpoint_url,
@@ -73,7 +80,7 @@ with DAG(
 
     check_status = PythonOperator(
     task_id='check_status',
-    python_callable=check_spark_status,
-)
+    python_callable=check_spark_status
+    )
 
     run_external_spark_job >> check_status

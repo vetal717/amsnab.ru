@@ -5,9 +5,12 @@ sys.path.insert(0, '/opt/spark/lib') # Добавляем путь, где те�
 from yandex_webmaster import YandexWebmasterAPI  # Импортируем модуль
 import argparse
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType, TimestampType, IntegerType
-from pyspark.sql.functions import to_date, year, month
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+from pyspark.sql.functions import to_date, year, month, day
 
+
+STATUS_FILE = FOLDER = "pages_index"
+METHOD = "getting_history_changes_number_pages_search"
 
 # Достаем переданные даты из Dag
 parser = argparse.ArgumentParser()
@@ -23,15 +26,16 @@ minio_access_key = args.minio_access_key
 minio_secret_key = args.minio_secret_key
 yandex_access_token = args.yandex_access_token
 
-
-STATUS_FILE = f"/opt/temporarily/data_status_{start_date}.txt"
+STATUS_FILE = f"/opt/temporarily/{STATUS_FILE}_{start_date}.txt"
 obj_webmaster = YandexWebmasterAPI(access_token=yandex_access_token)
+
 # Получаем список сайтов для анализа
 with open('/opt/spark/input_files/yw_list_ids_all_sites.txt', 'r') as file:
         list_id_all_sites = [line.strip() for line in file.readlines()]
 result_list = []
 for site in list_id_all_sites:
-    data = obj_webmaster.getting_history_changes_number_pages_search(site, start_date, end_date)
+    # data = obj_webmaster.getting_history_changes_number_pages_search(site, start_date, end_date)
+    data = getattr(obj_webmaster, METHOD)(site, start_date, end_date)
     result_list.append(data)
     
     # Здесь нужно проверить, есть ли данные или нет
@@ -69,12 +73,13 @@ if len(result_list) != 0:
     df_yw = spark.createDataFrame(data, schema=schema)
     df_yw = df_yw.withColumn("date", to_date("date"))\
                 .withColumn("year", year("date"))\
-                .withColumn("month", month("date"))
+                .withColumn("month", month("date"))\
+                .withColumn("day", day("date"))
 
     # Сохраняем его в MinIO в формате Parquet
-    df_yw.coalesce(1).write.mode("overwrite") \
-        .partitionBy("year", "month") \
-        .parquet("s3a://yandex-webmaster/pages_index")
+    df_yw.coalesce(1).write.mode("append") \
+        .partitionBy("year", "month", "day", "domain") \
+        .parquet(f"s3a://yandex-webmaster/{FOLDER}")
 
     print("✅ DataFrame успешно записан в MinIO")
 

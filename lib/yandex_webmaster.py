@@ -64,7 +64,7 @@ class YandexWebmasterAPI:
             response = response.json()   
             if response.get('history') is None:
                 return '[]'
-            data = response.get('history')
+            data = response.get('history') 
             df = pd.DataFrame(data)        
             df['domain'] = self.domain_from_host_id(host_id)
             df = df[['domain', 'date', 'value']]
@@ -74,7 +74,7 @@ class YandexWebmasterAPI:
             
   
     # Возвращает историю изменения индекса качества сайта (ИКС).
-    def getting_history_changes_x(self, host_id, start_date, end_date):        
+    def getting_history_quality_index(self, host_id, start_date, end_date):        
         request_url = f'{self.__main_url}/{self.get_user_id()}/hosts/{host_id}/sqi-history' \
                       f'?date_from={start_date}&date_to={end_date}'
         response = requests.get(request_url, headers=self.headers)

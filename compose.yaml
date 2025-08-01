@@ -138,7 +138,8 @@ services:
       - "8888:8888"
     volumes:
       - ./notebooks:/home/jovyan/work  # монтируем папку с ноутбуками
-      - ./lib:/home/jovyan/lib   
+      - ./lib:/home/jovyan/lib
+      - ./jars:/opt/jars
     environment:
       - JUPYTER_TOKEN=airflow          # пароль для доступа
     depends_on:
